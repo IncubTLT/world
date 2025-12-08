@@ -1,0 +1,140 @@
+{
+    // Используйте IntelliSense, чтобы узнать о возможных атрибутах.
+    // Наведите указатель мыши, чтобы просмотреть описания существующих атрибутов.
+    // Для получения дополнительной информации посетите: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "django runserver 8000",
+        "type": "debugpy",
+        "request": "launch",
+        "cwd": "${workspaceFolder}/backend/",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["runserver", "0.0.0.0:8000"],
+        "django": true,
+        "justMyCode": true
+      },
+      {
+        "name": "django gunicorn/uvicorn debug",
+        "type": "debugpy",
+        "request": "launch",
+        "cwd": "${workspaceFolder}/backend/",
+        "program": "${workspaceFolder}/venv/bin/gunicorn",
+        "args": [
+          "config.asgi:application",
+          "-c",
+          "config/entrypoints/server/dev.py",
+          "--reload",
+          "--log-level",
+          "debug"
+        ],
+        "django": true,
+        "console": "integratedTerminal",
+        "justMyCode": true,
+        "env": {
+          "DJANGO_SETTINGS_MODULE": "config.settings"
+        }
+      },
+      {
+        "name": "collectstatic",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["collectstatic", "--no-input"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "makemigrations",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["makemigrations"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "migrate",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["migrate"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "cancel migrate",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["migrate", "main", "0074"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "flush",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["flush", "--no-input"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "loaddata",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["loaddata", "db.json"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "dbbackup",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["dbbackup"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "dbrestore",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["dbrestore", "--noinput"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "mediarestore",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["mediarestore", "--noinput"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "createsuperuser",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/backend/manage.py",
+        "args": ["createsuperuser"],
+        "envFile": "${workspaceFolder}/.env",
+        "django": true
+      },
+      {
+        "name": "pytest",
+        "type": "debugpy",
+        "request": "launch",
+        "module": "pytest",
+        "args": ["tests/"],
+        "cwd": "${workspaceFolder}/backend/",
+        "django": true,
+        "console": "integratedTerminal",
+        "justMyCode": true
+      },
+    ],
+}

@@ -1,0 +1,19 @@
+[flake8]
+max-line-length = 180
+ignore =
+    E128,
+    E503,
+    W503
+
+exclude =
+    env/,
+    venv/,
+    */migrations/*.py,
+    fabfile.py,
+    .gitlab-ci.systemd.py,
+    fabfile.systemd.py,
+    .git,
+    project/local_settings.example.py,
+    test_settings.py,
+    conftest.py,
+    */tests/*.py,
