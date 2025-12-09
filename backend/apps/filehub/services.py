@@ -7,7 +7,6 @@ from PIL import Image as PIL_Image
 from PIL import UnidentifiedImageError
 
 from .models import MediaErrorCode, MediaFile, MediaFileVariant, Status
-from .s3_utils import get_s3_client
 
 
 def _build_variant_key(media: MediaFile, suffix: str) -> str:
@@ -58,7 +57,7 @@ def _create_image_variant(
 
 async def process_media_file_variants(media_file_id: str) -> None:
     media = MediaFile.objects.get(id=media_file_id)
-    client = get_s3_client()
+    client = settings.S3_CLIENT
 
     # Если это не картинка — просто считаем файл готовым
     if media.file_type != MediaFile.FileType.IMAGE:

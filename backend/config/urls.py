@@ -11,7 +11,7 @@ urlpatterns = [
     # Авторизация по коду (можно позже тоже перенести под /api/auth/)
     path("auth/request-code/", RequestCodeAPIView.as_view(), name="auth-request-code"),
     path("auth/verify-code/", VerifyCodeAPIView.as_view(), name="auth-verify-code"),
-    path("auth/token/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
+    path("auth/jwt/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
 
     # 🧩 Единая точка входа для всего API
     path("api/", include("apps.urls")),

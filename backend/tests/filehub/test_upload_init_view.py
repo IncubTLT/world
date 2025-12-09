@@ -1,5 +1,3 @@
-import uuid
-
 import pytest
 from apps.filehub.models import MediaAttachment, MediaFile
 from django.contrib.contenttypes.models import ContentType
@@ -8,26 +6,30 @@ from rest_framework.test import APIClient
 
 
 @pytest.mark.django_db
-def test_upload_init_creates_mediafile_and_returns_presigned_post(monkeypatch, regular_user):
+def test_upload_init_creates_mediafile_and_returns_presigned_put(
+    monkeypatch,
+    regular_user,
+):
     client = APIClient()
     client.force_authenticate(user=regular_user)
 
-    def fake_generate_presigned_post(key, expires_in=300):
+    def fake_generate_presigned_put(*args, **kwargs):
+        # Эмулируем новый формат: url + method + headers
         return {
             "url": "https://example.com/upload",
-            "fields": {
-                "key": "dummy-key",
-                "policy": "BASE64_POLICY",
+            "method": "PUT",
+            "headers": {
+                "Content-Type": "image/jpeg",
             },
         }
 
     def fake_build_media_key(**kwargs):
         return "images/private/test/uuid.jpg"
 
-    # важно: патчим именно тот модуль, где эти функции ИМПОРТИРОВАНЫ
+    # ВАЖНО: патчим именно тот модуль, где функции ИМПОРТИРОВАНЫ во view
     monkeypatch.setattr(
-        "apps.filehub.views.generate_presigned_post",
-        fake_generate_presigned_post,
+        "apps.filehub.views.generate_presigned_put",
+        fake_generate_presigned_put,
     )
     monkeypatch.setattr(
         "apps.filehub.views.build_media_key",
@@ -56,17 +58,25 @@ def test_upload_init_creates_mediafile_and_returns_presigned_post(monkeypatch, r
     result_item = body["files"][0]
     assert result_item["key"] == "images/private/test/uuid.jpg"
     assert result_item["visibility"] == "private"
-    assert result_item["upload"]["url"] == "https://example.com/upload"
+
+    # Новый формат upload
+    upload = result_item["upload"]
+    assert upload["url"] == "https://example.com/upload"
+    assert upload["method"] == "PUT"
+    assert upload["headers"]["Content-Type"] == "image/jpeg"
 
     mf = MediaFile.objects.get(id=result_item["media_file_id"])
-    # 🔧 тут должен быть regular_user, а не user
     assert mf.owner == regular_user
     assert mf.key == "images/private/test/uuid.jpg"
     assert mf.file_type == MediaFile.FileType.IMAGE
 
 
 @pytest.mark.django_db
-def test_upload_init_creates_media_attachment(monkeypatch, django_user_model, regular_user):
+def test_upload_init_creates_media_attachment(
+    monkeypatch,
+    django_user_model,
+    regular_user,
+):
     """
     Проверяем кейс, когда сразу привязываем медиа к объекту.
     """
@@ -77,18 +87,21 @@ def test_upload_init_creates_media_attachment(monkeypatch, django_user_model, re
 
     ct = ContentType.objects.get_for_model(UserModel)
 
-    def fake_generate_presigned_post(key, expires_in=300):
+    def fake_generate_presigned_put(*args, **kwargs):
         return {
             "url": "https://example.com/upload",
-            "fields": {"key": "dummy-key"},
+            "method": "PUT",
+            "headers": {
+                "Content-Type": "image/png",
+            },
         }
 
     def fake_build_media_key(**kwargs):
         return "images/private/users/user/1/test.jpg"
 
     monkeypatch.setattr(
-        "apps.filehub.views.generate_presigned_post",
-        fake_generate_presigned_post,
+        "apps.filehub.views.generate_presigned_put",
+        fake_generate_presigned_put,
     )
     monkeypatch.setattr(
         "apps.filehub.views.build_media_key",
@@ -105,7 +118,6 @@ def test_upload_init_creates_media_attachment(monkeypatch, django_user_model, re
                 "visibility": "private",
                 "target_app_label": ct.app_label,
                 "target_model": ct.model,
-                # 🔧 вместо owner.id — regular_user.id
                 "target_object_id": regular_user.id,
                 "role": "avatar",
             }

@@ -11,9 +11,9 @@ from rest_framework.views import APIView
 
 from .models import MediaAttachment, MediaErrorCode, MediaFile, Status
 from .permissions import MediaFilePermission
-from .s3_utils import generate_presigned_post
-from .serializers import (MediaFileSerializer, UploadCompleteSerializer, UploadInitResponseSerializer,
-                          UploadInitSerializer)
+from .s3_utils import generate_presigned_put
+from .serializers import (MediaFileSerializer, UploadCompleteSerializer,
+                          UploadInitResponseSerializer, UploadInitSerializer)
 from .tasks import process_media_file_variants_task
 from .utils import build_media_key
 
@@ -100,7 +100,6 @@ class UploadInitView(APIView):
     1) Создаёт записи MediaFile (и при необходимости MediaAttachment).
     2) Генерирует presigned POST-формы для загрузки в S3/MinIO.
     """
-
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -142,14 +141,17 @@ class UploadInitView(APIView):
                     priority=item.get("priority") or 100,
                 )
 
-            presigned = generate_presigned_post(key)
+            presigned = generate_presigned_put(
+                key,
+                content_type=item.get("content_type") or None,
+            )
 
             results.append(
                 {
                     "media_file_id": str(media.id),
                     "key": key,
                     "visibility": visibility,
-                    "upload": presigned,  # {url, fields}
+                    "upload": presigned,  # {url, method, headers}
                 }
             )
 

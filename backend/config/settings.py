@@ -28,8 +28,15 @@ DEFAULT_SIGNATURE_ALGORITHM = "RS256"
 
 
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
-ALLOWED_HOSTS = [host for host in os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost").split(",") if host]
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default='localhost').split(' ')
 DOMAIN = os.environ.get("DOMAIN")
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    f"https://{DOMAIN}"
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -163,9 +170,9 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 
-STATIC_BUCKET_NAME = 'world-static'
-MEDIA_BUCKET_NAME = 'world-media'
-DATABASE_BUCKET_NAME = 'world-database'
+STATIC_BUCKET_NAME = 'hal-static'
+MEDIA_BUCKET_NAME = 'hal-media'
+DATABASE_BUCKET_NAME = 'hal-database'
 
 USE_S3 = bool(int(os.getenv('USE_S3', 0)))
 
@@ -231,16 +238,13 @@ S3_CLIENT = boto3.client(
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework.authentication.SessionAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.BasicAuthentication",  # убрать в проде
     ],
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticatedOrReadOnly",
     ),
     "DEFAULT_RENDERER_CLASSES": (
         "rest_framework.renderers.JSONRenderer",
-        "rest_framework.renderers.BrowsableAPIRenderer",
     ),
     "DEFAULT_PARSER_CLASSES": (
         "rest_framework.parsers.JSONParser",

@@ -1,6 +1,10 @@
 import pytest
-from apps.filehub.models import (MediaAttachment, MediaFile, MediaFileVariant,
-                                 Status)
+from apps.filehub.models import (
+    MediaAttachment,
+    MediaFile,
+    MediaFileVariant,
+    Status,
+)
 from django.contrib.contenttypes.models import ContentType
 from django.urls import reverse
 from rest_framework import status
@@ -19,7 +23,9 @@ def test_upload_complete_updates_media_and_triggers_task(monkeypatch, regular_us
 
     # Аккуратно добавляем статус, только если он реально есть в модели
     extra_kwargs = {}
-    if hasattr(MediaFile, "Status") and any(f.name == "status" for f in MediaFile._meta.fields):
+    if hasattr(MediaFile, "Status") and any(
+        f.name == "status" for f in MediaFile._meta.fields
+    ):
         extra_kwargs["status"] = Status.PENDING
 
     media = MediaFile.objects.create(
@@ -73,7 +79,11 @@ def test_upload_complete_updates_media_and_triggers_task(monkeypatch, regular_us
 
 
 @pytest.mark.django_db
-def test_upload_complete_forbidden_for_non_owner(monkeypatch, regular_user, django_user_model):
+def test_upload_complete_forbidden_for_non_owner(
+    monkeypatch,
+    regular_user,
+    django_user_model,
+):
     """
     Другой пользователь не может подтверждать загрузку чужого файла.
     """
@@ -190,8 +200,10 @@ def test_upload_complete_too_large(settings, monkeypatch, regular_user):
 
 
 @pytest.mark.django_db
-def test_mediafile_delete_cascades_to_variants_and_attachments(regular_user, django_user_model):
-
+def test_mediafile_delete_cascades_to_variants_and_attachments(
+    regular_user,
+    django_user_model,
+):
     user = regular_user
     ct = ContentType.objects.get_for_model(django_user_model)
 
@@ -223,24 +235,45 @@ def test_mediafile_delete_cascades_to_variants_and_attachments(regular_user, dja
 
 
 @pytest.mark.django_db
-def test_upload_init_multiple_files_one_with_target(monkeypatch, regular_user, django_user_model):
-    from apps.filehub.models import MediaAttachment, MediaFile
-    from django.contrib.contenttypes.models import ContentType
-
+def test_upload_init_multiple_files_one_with_target(
+    monkeypatch,
+    regular_user,
+    django_user_model,
+):
+    """
+    Проверяем кейс, когда в upload-init передаём несколько файлов,
+    и только один из них привязан к объекту.
+    """
     client = APIClient()
     client.force_authenticate(user=regular_user)
 
-    ct = ContentType.objects.get_for_model(django_user_model)
+    UserModel = django_user_model
+    ct = ContentType.objects.get_for_model(UserModel)
 
-    def fake_generate_presigned_post(key, expires_in=300):
-        return {"url": "https://example.com/upload", "fields": {"key": "dummy"}}
+    # ⚡ Новый формат: presigned PUT (url + method + headers)
+    def fake_generate_presigned_put(*args, **kwargs):
+        content_type = kwargs.get("content_type", "application/octet-stream")
+        return {
+            "url": "https://example.com/upload",
+            "method": "PUT",
+            "headers": {
+                "Content-Type": content_type,
+            },
+        }
 
     def fake_build_media_key(**kwargs):
-        # можешь сделать чуть умнее, но для теста хватит
-        return f"images/private/{kwargs.get('original_name', 'file')}"
+        # Для наглядности используем original_name в ключе
+        original_name = kwargs.get("original_name") or "file"
+        return f"images/private/{original_name}"
 
-    monkeypatch.setattr("apps.filehub.views.generate_presigned_post", fake_generate_presigned_post)
-    monkeypatch.setattr("apps.filehub.views.build_media_key", fake_build_media_key)
+    monkeypatch.setattr(
+        "apps.filehub.views.generate_presigned_put",
+        fake_generate_presigned_put,
+    )
+    monkeypatch.setattr(
+        "apps.filehub.views.build_media_key",
+        fake_build_media_key,
+    )
 
     url = reverse("filehub-upload-init")
     payload = {
@@ -266,6 +299,21 @@ def test_upload_init_multiple_files_one_with_target(monkeypatch, regular_user, d
 
     response = client.post(url, data=payload, format="json")
     assert response.status_code == 201
+
+    body = response.json()
+    assert "files" in body
+    assert len(body["files"]) == 2
+
+    first, second = body["files"]
+
+    # Проверим, что ключи соответствуют нашему fake_build_media_key
+    assert first["key"] == "images/private/avatar.png"
+    assert second["key"] == "images/private/doc.pdf"
+
+    # И что upload приходит в PUT-формате
+    assert first["upload"]["url"] == "https://example.com/upload"
+    assert first["upload"]["method"] == "PUT"
+    assert second["upload"]["method"] == "PUT"
 
     # 2 MediaFile
     assert MediaFile.objects.count() == 2

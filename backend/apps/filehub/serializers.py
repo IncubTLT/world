@@ -118,8 +118,7 @@ class UploadInitFileResultSerializer(serializers.Serializer):
 
     upload = serializers.DictField(
         help_text=_(
-            "Данные presigned POST для прямой загрузки в S3/MinIO "
-            "(обычно содержит url и fields)."
+            "Данные presigned POST для прямой загрузки в S3/MinIO."
         )
     )
 

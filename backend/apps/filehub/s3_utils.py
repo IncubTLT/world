@@ -1,30 +1,38 @@
-import boto3
 from typing import Any, Dict
 
 from django.conf import settings
 
-
-def get_s3_client():
-    """
-    Возвращает S3-клиент.
-    Настрой под свои ENV (endpoint_url, region_name и т.п. при MinIO).
-    """
-    return boto3.client(
-        "s3",
-        endpoint_url=getattr(settings, "AWS_S3_ENDPOINT_URL", None),
-        aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-        region_name=getattr(settings, "AWS_S3_REGION_NAME", None),
-    )
+client = settings.S3_CLIENT
 
 
 def generate_presigned_post(key: str, expires_in: int = 300) -> Dict[str, Any]:
     """
     Создаёт presigned POST для загрузки файла напрямую в бакет MEDIA_BUCKET_NAME.
     """
-    client = get_s3_client()
     return client.generate_presigned_post(
         Bucket=settings.MEDIA_BUCKET_NAME,
         Key=key,
         ExpiresIn=expires_in,
     )
+
+
+def generate_presigned_put(key: str, content_type: str | None = None, expires_in: int = 3600) -> dict:
+    params: dict = {
+        "Bucket": settings.MEDIA_BUCKET_NAME,
+        "Key": key,
+    }
+    if content_type:
+        params["ContentType"] = content_type
+
+    url = client.generate_presigned_url(
+        ClientMethod="put_object",
+        Params=params,
+        ExpiresIn=expires_in,
+    )
+    return {
+        "url": url,
+        "method": "PUT",
+        "headers": {
+            **({"Content-Type": content_type} if content_type else {})
+        },
+    }

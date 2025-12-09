@@ -62,7 +62,7 @@ touch .env
 ```bash
 PYTHONPATH=./backend
 
-DJANGO_ALLOWED_HOSTS='localhost 127.0.0.1 192.168.0.100 dev.domain.ru'
+ALLOWED_HOSTS='localhost 127.0.0.1 192.168.0.100 dev.domain.ru'
 # DOMAIN='127.0.0.1'
 DOMAIN='dev.domain.ru'
 
