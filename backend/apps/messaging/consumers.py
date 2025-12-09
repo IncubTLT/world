@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from typing import Any
 
@@ -7,9 +8,11 @@ from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer
 from config.async_redis import AsyncRedisClient
 from django.contrib.auth import get_user_model
-from messaging.models import ChatMessage, ChatRoom
+
+from .models import ChatMessage, ChatRoom
 
 User = get_user_model()
+STREAM_CHUNK_SIZE = 300
 
 
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -40,7 +43,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
     # ---------- lifecycle ----------
-
     async def connect(self) -> None:
         # --- user из scope ---
         scope_user = self.scope.get("user")
@@ -83,6 +85,29 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
 
         await self.accept()
+
+        self.room = room
+        self.room_group_name = f"chat_room_{room.id}"
+        self.message_count = 0
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name,
+        )
+
+        await self.accept()
+
+        history_items = await self._get_last_messages_payload(limit=50)
+        history_items.reverse()
+
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "history",
+                    "items": history_items,
+                }
+            )
+        )
 
     async def disconnect(self, code: int) -> None:
         if self.room_group_name:
@@ -136,21 +161,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         self.message_count += 1
 
-        # сохраняем в БД
         await self._save_message(user, message)
 
-        # шлём всем участникам комнаты
-        await self.channel_layer.group_send(
-            self.room_group_name,
-            {
-                "type": "chat.message",
-                "message": message,
-                "display_name": user.display_name,
-                "is_stream": False,
-                "is_start": False,
-                "is_end": False,
-            },
-        )
+        await self._broadcast_stream(user, message)
 
     async def chat_message(self, event: dict[str, Any]) -> None:
         """Отправка сообщения на клиент."""
@@ -175,3 +188,75 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }
             )
         )
+
+    @database_sync_to_async
+    def _get_last_messages_payload(self, limit: int = 50) -> list[dict]:
+        """
+        Возвращает последние limit сообщений комнаты в виде готовых dict'ов.
+        """
+        assert self.room is not None
+        qs = (
+            self.room.messages  # pyright: ignore[reportAttributeAccessIssue]
+            .select_related("sender")
+            .order_by("-created_at")[:limit]
+        )
+        items = []
+        for m in qs:
+            items.append(
+                {
+                    "id": m.id,
+                    "text": m.text,
+                    "display_name": m.sender.display_name,
+                    "created_at": m.created_at.isoformat(),
+                }
+            )
+        return items
+
+    async def _broadcast_stream(self, user: User, message: str) -> None:
+        """
+        Отправляет сообщение в комнату:
+        - если короткое — одним пакетом без стрима,
+        - если длинное — режет на чанки и шлёт с флагами is_stream/is_start/is_end.
+        """
+        if not self.room_group_name:
+            return
+
+        text = message or ""
+        if not text:
+            return
+
+        # короткое сообщение — старое поведение
+        if len(text) <= STREAM_CHUNK_SIZE:
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "chat.message",
+                    "message": text,
+                    "display_name": user.display_name,
+                    "is_stream": False,
+                    "is_start": False,
+                    "is_end": False,
+                },
+            )
+            return
+
+        # длинное сообщение — режем на чанки
+        chunks = [
+            text[i: i + STREAM_CHUNK_SIZE]
+            for i in range(0, len(text), STREAM_CHUNK_SIZE)
+        ]
+        last_idx = len(chunks) - 1
+
+        for idx, chunk in enumerate(chunks):
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    "type": "chat.message",
+                    "message": chunk,
+                    "display_name": user.display_name,
+                    "is_stream": True,
+                    "is_start": idx == 0,
+                    "is_end": idx == last_idx,
+                },
+            )
+            await asyncio.sleep(0.03)

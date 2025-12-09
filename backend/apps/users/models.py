@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.core.validators import FileExtensionValidator
+from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -99,13 +99,9 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(_("Email"), unique=True)
     display_name = models.CharField(_("Отображаемое имя"), max_length=150)
-    avatar = models.ImageField(
-        _("Аватар"),
-        upload_to="avatars/",
-        null=True,
-        blank=True,
-        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
-        help_text=_("Хранится во внешнем S3-совместимом хранилище."),
+    avatar = GenericRelation(
+        "filehub.MediaAttachment",
+        related_query_name="users",
     )
     bio = models.TextField(_("О себе"), blank=True)
     country = models.CharField(_("Страна"), max_length=100, blank=True)

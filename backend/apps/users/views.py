@@ -7,16 +7,49 @@ from apps.users.utils import send_activation_email
 from apps.utils.utilities import get_client_ip
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from rest_framework import permissions, status
+from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import (OpenApiExample, OpenApiResponse,
+                                   extend_schema, extend_schema_view)
+from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .serializers import RequestCodeSerializer, VerifyCodeSerializer
+from .serializers import (RequestCodeSerializer, UserSerializer,
+                          VerifyCodeSerializer)
 
 User = get_user_model()
 
 
+@extend_schema(
+    tags=["auth"],
+    summary=_("Запрос кода для входа по email"),
+    description=_(
+        "Принимает email пользователя, генерирует одноразовый код и отправляет его на почту. "
+        "Используется для входа без пароля."
+    ),
+    request=RequestCodeSerializer,
+    responses={
+        200: OpenApiResponse(
+            description=_("Код успешно отправлен на email (или будет отправлен в фоне)."),
+            examples=[
+                OpenApiExample(
+                    "Успех",
+                    value={"detail": "Код отправлен на указанный email."},
+                    response_only=True,
+                )
+            ],
+        ),
+        400: OpenApiResponse(
+            description=_("Ошибка валидации (невалидный email или отсутствует поле)."),
+        ),
+        429: OpenApiResponse(
+            description=_("Слишком много запросов с этого IP/email за короткий период."),
+        ),
+    },
+)
 class RequestCodeAPIView(APIView):
     """
     POST /api/auth/request-code/
@@ -67,6 +100,40 @@ class RequestCodeAPIView(APIView):
         )
 
 
+@extend_schema(
+    tags=["auth"],
+    summary=_("Подтверждение кода и получение токенов"),
+    description=_(
+        "Проверяет одноразовый код для указанного email. "
+        "Если пользователь ещё не существует — создаёт его. "
+        "В случае успеха возвращает JWT-токены (access/refresh)."
+    ),
+    request=VerifyCodeSerializer,
+    responses={
+        200: OpenApiResponse(
+            description=_("Код верный, выданы токены."),
+            examples=[
+                OpenApiExample(
+                    "Успех",
+                    value={
+                        "access": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                        "refresh": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+                    },
+                    response_only=True,
+                )
+            ],
+        ),
+        400: OpenApiResponse(
+            description=_("Неверный код, истёкший код или ошибка валидации."),
+        ),
+        404: OpenApiResponse(
+            description=_("Код для этого email не найден (истёк или не запрашивался)."),
+        ),
+        429: OpenApiResponse(
+            description=_("Превышено число попыток ввода кода."),
+        ),
+    },
+)
 class VerifyCodeAPIView(APIView):
     """
     POST /api/auth/verify-code/
@@ -171,3 +238,86 @@ class VerifyCodeAPIView(APIView):
         }
 
         return Response(data, status=status.HTTP_200_OK)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        tags=["users"],
+        summary=_("Список пользователей"),
+        description=_(
+            "Возвращает список всех пользователей. "
+            "Доступно только администраторам (is_staff=True)."
+        ),
+        responses={
+            200: OpenApiResponse(response=UserSerializer(many=True)),
+            403: OpenApiResponse(description=_("Недостаточно прав.")),
+        },
+    ),
+    retrieve=extend_schema(
+        tags=["users"],
+        summary=_("Информация о пользователе"),
+        description=_(
+            "Возвращает информацию о конкретном пользователе по ID. "
+            "Доступно только администраторам (is_staff=True)."
+        ),
+        responses={
+            200: OpenApiResponse(response=UserSerializer),
+            403: OpenApiResponse(description=_("Недостаточно прав.")),
+            404: OpenApiResponse(description=_("Пользователь не найден.")),
+        },
+    ),
+)
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Read-only ViewSet для пользователей.
+
+    - admin/staff: могут смотреть список и детали по ID;
+    - обычные пользователи: отдельная ручка /users/me/ (см. ниже).
+    """
+
+    serializer_class = UserSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):  # pyright: ignore[reportIncompatibleMethodOverride]
+        return (
+            User.objects
+            .only("id", "email", "display_name")
+            .order_by("id")
+        )
+
+    @extend_schema(
+        tags=["users"],
+        summary=_("Текущий пользователь"),
+        description=_(
+            "Возвращает данные текущего авторизованного пользователя. "
+            "Доступно любому аутентифицированному пользователю."
+        ),
+        responses={
+            200: OpenApiResponse(response=UserSerializer),
+            401: OpenApiResponse(description=_("Не авторизован.")),
+        },
+        examples=[
+            OpenApiExample(
+                "Пример ответа",
+                value={
+                    "id": 123,
+                    "email": "user@example.com",
+                    "display_name": "user",
+                },
+                response_only=True,
+            )
+        ],
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="me",
+        permission_classes=[IsAuthenticated],
+    )
+    def me(self, request):
+        """
+        /api/users/users/me/ (если оставить текущую схему include)
+        или /api/users/me/ (если поправим роутинг, см. ниже).
+        """
+        serializer = self.get_serializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)

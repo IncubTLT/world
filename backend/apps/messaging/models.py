@@ -1,12 +1,11 @@
 from __future__ import annotations
+
 import uuid
-from django.utils.translation import gettext_lazy as _
-from django.contrib.auth import get_user_model
-from django.db import models
 
 from apps.utils.models import Create, CreateUpdater
-
-User = get_user_model()
+from django.conf import settings
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class ChatRoom(CreateUpdater):
@@ -32,7 +31,7 @@ class ChatRoom(CreateUpdater):
         help_text=_("Имя используется только для групповых комнат."),
     )
     owner = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         verbose_name=_("Владелец"),
         on_delete=models.SET_NULL,
         null=True,
@@ -40,7 +39,7 @@ class ChatRoom(CreateUpdater):
         related_name="owned_chat_rooms",
     )
     participants = models.ManyToManyField(
-        User,
+        settings.AUTH_USER_MODEL,
         verbose_name=_("Участники"),
         through="ChatRoomParticipant",
         related_name="chat_rooms",
@@ -64,7 +63,7 @@ class ChatRoomParticipant(models.Model):
         related_name="memberships",
     )
     user = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         verbose_name=_("Пользователь"),
         on_delete=models.CASCADE,
         related_name="chat_memberships",
@@ -89,7 +88,7 @@ class ChatMessage(Create):
         related_name="messages",
     )
     sender = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         verbose_name=_("Отправитель"),
         on_delete=models.CASCADE,
         related_name="chat_messages",

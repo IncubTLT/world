@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
     "apps.users",
+    "apps.filehub",
+    "apps.geohub",
     "apps.places",
     "apps.trips",
     "apps.reviews",
@@ -161,9 +163,9 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 
-STATIC_BUCKET_NAME = 'osync-static'
-MEDIA_BUCKET_NAME = 'osync-media'
-DATABASE_BUCKET_NAME = 'osync-database'
+STATIC_BUCKET_NAME = 'world-static'
+MEDIA_BUCKET_NAME = 'world-media'
+DATABASE_BUCKET_NAME = 'world-database'
 
 USE_S3 = bool(int(os.getenv('USE_S3', 0)))
 
