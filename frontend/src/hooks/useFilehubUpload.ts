@@ -1,11 +1,8 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import {
-  FilehubUploadOptions,
-  UploadCompleteResult,
-  uploadViaFilehub,
-} from '@/lib/filehub';
+import { uploadViaFilehub } from '@/lib/filehub';
+import type { FilehubUploadOptions, UploadCompleteResult } from '@/lib/filehub';
 
 type Status = 'idle' | 'uploading' | 'success' | 'error';
 

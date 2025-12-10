@@ -35,6 +35,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    f"http://{DOMAIN}",
     f"https://{DOMAIN}"
 ]
 
@@ -170,9 +171,9 @@ AWS_S3_OBJECT_PARAMETERS = {
     'CacheControl': 'max-age=86400',
 }
 
-STATIC_BUCKET_NAME = 'hal-static'
-MEDIA_BUCKET_NAME = 'hal-media'
-DATABASE_BUCKET_NAME = 'hal-database'
+STATIC_BUCKET_NAME = os.getenv('STATIC_BUCKET_NAME')
+MEDIA_BUCKET_NAME = os.getenv('MEDIA_BUCKET_NAME')
+DATABASE_BUCKET_NAME = os.getenv('DATABASE_BUCKET_NAME')
 
 USE_S3 = bool(int(os.getenv('USE_S3', 0)))
 

@@ -11,7 +11,7 @@ import type {
 type Props = {
   label?: string;
   visibility?: MediaVisibility;
-  fileType?: FileKind;
+  fileType?: FileKind; // внешний проп, оставляем как есть
   targetAppLabel?: string;
   targetModel?: string;
   targetObjectId?: number;
@@ -23,7 +23,7 @@ type Props = {
 export function FileUploadButton({
   label = 'Загрузить файл',
   visibility = 'private',
-  fileType = 'image',
+  fileType = 'image', // внешний API не ломаем
   targetAppLabel,
   targetModel,
   targetObjectId,
@@ -33,9 +33,12 @@ export function FileUploadButton({
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // маппим fileType → kind для FilehubUploadOptions
+  const kind: FileKind = fileType;
+
   const baseOptions: FilehubUploadOptions = {
     visibility,
-    fileType,
+    kind,
     targetAppLabel,
     targetModel,
     targetObjectId,
