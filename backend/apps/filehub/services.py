@@ -2,7 +2,6 @@ import io
 from typing import Tuple
 
 from django.conf import settings
-from django.db import transaction
 from PIL import Image as PIL_Image
 from PIL import UnidentifiedImageError
 
@@ -16,7 +15,7 @@ def _build_variant_key(media: MediaFile, suffix: str) -> str:
     return f"{base}/variants/{suffix}.webp"
 
 
-def _create_image_variant(
+async def _create_image_variant(
     *,
     client,
     media: MediaFile,
@@ -40,7 +39,7 @@ def _create_image_variant(
         ContentType="image/webp",
     )
 
-    variant, _ = MediaFileVariant.objects.update_or_create(
+    variant, _ = await MediaFileVariant.objects.aupdate_or_create(
         media_file=media,
         kind=kind,
         defaults={
@@ -56,7 +55,7 @@ def _create_image_variant(
 
 
 async def process_media_file_variants(media_file_id: str) -> None:
-    media = MediaFile.objects.get(id=media_file_id)
+    media = await MediaFile.objects.aget(id=media_file_id)
     client = settings.S3_CLIENT
 
     # Если это не картинка — просто считаем файл готовым
@@ -64,7 +63,7 @@ async def process_media_file_variants(media_file_id: str) -> None:
         media.status = Status.READY
         media.error_code = MediaErrorCode.NONE
         media.error_detail = ""
-        media.save(update_fields=["status", "error_code", "error_detail"])
+        await media.asave(update_fields=["status", "error_code", "error_detail"])
         return
 
     try:
@@ -72,7 +71,7 @@ async def process_media_file_variants(media_file_id: str) -> None:
         media.status = Status.PROCESSING
         media.error_code = MediaErrorCode.NONE
         media.error_detail = ""
-        media.save(update_fields=["status", "error_code", "error_detail"])
+        await media.asave(update_fields=["status", "error_code", "error_detail"])
 
         # 1. Тянем картинку из S3
         obj = client.get_object(Bucket=settings.MEDIA_BUCKET_NAME, Key=media.key)
@@ -84,33 +83,32 @@ async def process_media_file_variants(media_file_id: str) -> None:
             (MediaFileVariant.Kind.THUMB_SMALL, (300, 300)),
         ]
 
-        with transaction.atomic():
-            MediaFileVariant.objects.get_or_create(
-                media_file=media,
-                kind=MediaFileVariant.Kind.ORIGINAL,
-                defaults={
-                    "key": media.key,
-                    "status": Status.READY,
-                    "content_type": media.content_type or "image/*",
-                    "size_bytes": media.size_bytes,
-                    "error_code": MediaErrorCode.NONE,
-                    "error_message": "",
-                },
-            )
+        MediaFileVariant.objects.aget_or_create(
+            media_file=media,
+            kind=MediaFileVariant.Kind.ORIGINAL,
+            defaults={
+                "key": media.key,
+                "status": Status.READY,
+                "content_type": media.content_type or "image/*",
+                "size_bytes": media.size_bytes,
+                "error_code": MediaErrorCode.NONE,
+                "error_message": "",
+            },
+        )
 
-            for kind, size in variants_spec:
-                _create_image_variant(
-                    client=client,
-                    media=media,
-                    base_img=img,
-                    kind=kind,
-                    thumbnail_size=size,
-                )
+        for kind, size in variants_spec:
+            await _create_image_variant(
+                client=client,
+                media=media,
+                base_img=img,
+                kind=kind,
+                thumbnail_size=size,
+            )
 
         media.status = Status.READY
         media.error_code = MediaErrorCode.NONE
         media.error_detail = ""
-        media.save(update_fields=["status", "error_code", "error_detail"])
+        await media.asave(update_fields=["status", "error_code", "error_detail"])
 
     except UnidentifiedImageError as e:
         # Файл не распознаётся как картинка
@@ -118,9 +116,9 @@ async def process_media_file_variants(media_file_id: str) -> None:
         media.status = Status.FAILED
         media.error_code = MediaErrorCode.CORRUPTED
         media.error_detail = msg
-        media.save(update_fields=["status", "error_code", "error_detail"])
+        await media.asave(update_fields=["status", "error_code", "error_detail"])
 
-        MediaFileVariant.objects.filter(media_file=media).update(
+        await MediaFileVariant.objects.filter(media_file=media).aupdate(
             status=Status.FAILED,
             error_code=MediaErrorCode.CORRUPTED,
             error_message=msg[:1000],
@@ -132,9 +130,9 @@ async def process_media_file_variants(media_file_id: str) -> None:
         media.status = Status.FAILED
         media.error_code = MediaErrorCode.PROCESSING_ERROR
         media.error_detail = msg
-        media.save(update_fields=["status", "error_code", "error_detail"])
+        await media.asave(update_fields=["status", "error_code", "error_detail"])
 
-        MediaFileVariant.objects.filter(media_file=media).update(
+        await MediaFileVariant.objects.filter(media_file=media).aupdate(
             status=Status.FAILED,
             error_code=MediaErrorCode.PROCESSING_ERROR,
             error_message=msg[:1000],

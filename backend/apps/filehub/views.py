@@ -235,7 +235,7 @@ class UploadCompleteView(APIView):
 
         media.save(update_fields=list(set(updated_fields)))
 
-        async_to_sync(process_media_file_variants_task.kiq)(str(media.id))
+        async_to_sync(process_media_file_variants_task)(str(media.id))
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
