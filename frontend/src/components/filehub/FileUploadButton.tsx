@@ -6,24 +6,25 @@ import type {
   FileKind,
   MediaVisibility,
   FilehubUploadOptions,
+  UploadCompleteResult,
 } from '@/lib/filehub';
 
 type Props = {
   label?: string;
   visibility?: MediaVisibility;
-  fileType?: FileKind; // внешний проп, оставляем как есть
+  fileType?: FileKind;
   targetAppLabel?: string;
   targetModel?: string;
   targetObjectId?: number;
   role?: string;
   priority?: number;
-  onUploaded?(result: unknown): void;
+  onUploaded?(result: UploadCompleteResult): void;
 };
 
 export function FileUploadButton({
   label = 'Загрузить файл',
   visibility = 'private',
-  fileType = 'image', // внешний API не ломаем
+  fileType = 'image',
   targetAppLabel,
   targetModel,
   targetObjectId,
@@ -33,12 +34,9 @@ export function FileUploadButton({
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // маппим fileType → kind для FilehubUploadOptions
-  const kind: FileKind = fileType;
-
   const baseOptions: FilehubUploadOptions = {
     visibility,
-    kind,
+    fileType, // 👈 кладём в options именно fileType, не kind
     targetAppLabel,
     targetModel,
     targetObjectId,
@@ -85,8 +83,7 @@ export function FileUploadButton({
 
       {status === 'success' && result && (
         <div className="text-xs text-emerald-400">
-          Файл успешно загружен (media_file_id:{' '}
-          {String((result as any).media_file_id)})
+          Файл успешно загружен (media_file_id: {String(result.media_file_id)})
         </div>
       )}
 
