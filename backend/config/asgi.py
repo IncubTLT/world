@@ -2,8 +2,9 @@ import logging
 import os
 
 from asgiref.compatibility import guarantee_single_callable
-from channels.auth import AuthMiddlewareStack
 from channels.routing import ProtocolTypeRouter, URLRouter
+from config.async_redis import set_async_redis_client
+from config.channels_jwt import JwtAuthMiddlewareStack
 from config.taskiq_app import scheduler, taskiq_broker
 from django.core.asgi import get_asgi_application
 
@@ -15,6 +16,8 @@ application = get_asgi_application()
 
 async def startup():
     """Действия при старте приложения."""
+    await set_async_redis_client()
+
     if not taskiq_broker.is_worker_process:
         await scheduler.startup()
     logger.info("Taskiq планировщик запущен.")
@@ -28,7 +31,9 @@ async def shutdown():
 
 
 def get_application():
-    from apps.messaging.routing import websocket_urlpatterns
+    from apps.ai.routing import websocket_urlpatterns as ai_urlpatterns
+    from apps.messaging.routing import \
+        websocket_urlpatterns as messaging_urlpatterns
 
     class LifespanMiddleware:
         def __init__(self, app):
@@ -69,9 +74,9 @@ def get_application():
 
     return LifespanMiddleware(ProtocolTypeRouter({
         'http': application,
-        'websocket': AuthMiddlewareStack(
+        'websocket': JwtAuthMiddlewareStack(
             URLRouter(
-                websocket_urlpatterns
+                messaging_urlpatterns + ai_urlpatterns
             )
         ),
     }))

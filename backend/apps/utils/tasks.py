@@ -1,3 +1,4 @@
+from botocore.exceptions import ClientError
 import logging
 
 import aiosmtplib
@@ -10,6 +11,7 @@ from django.forms import ValidationError
 from templated_email import get_templated_mail
 
 logger = logging.getLogger(__name__)
+BUCKET_NAME = settings.MEDIA_BUCKET_NAME
 
 
 @taskiq_broker.task
@@ -115,3 +117,23 @@ async def send_email_msg_attachments(
     except Exception as e:
         logger.exception("Email send failed via %s: %r", backend_path, e)
         raise
+
+
+@taskiq_broker.task
+def delete_image_in_bucket(url: str, bucket: str = BUCKET_NAME) -> str:
+    """
+    Задача на удаление картинки из бакета в облаке.
+
+    ### Args:
+    - url (`str`): Полный url к картинке на бакете.
+    - bucket (`str`, optional): Имя бакета. По умолчанию `settings.MEDIA_BUCKET_NAME`.
+
+    """
+    client = settings.S3_CLIENT
+
+    key = '/'.join(url.split('/')[-2:])
+    try:
+        client.delete_object(Bucket=bucket, Key=key)
+        return f"Картинка {key} удалена успешно."
+    except ClientError as e:
+        return f"Ошибка при удалении объекта из бакета: {e}"

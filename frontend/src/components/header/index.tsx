@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useEmailCodeAuth } from '@/hooks/useEmailCodeAuth';
+import Link from 'next/link';
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -40,6 +41,17 @@ export function Header() {
   return (
     <header className="w-full border-b border-slate-800 bg-slate-950/80 backdrop-blur z-20">
       <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <span className="text-lg font-semibold text-slate-50">DCL</span>
+
+          {/* Быстрая ссылка в AI-чат с фиксированным room_id для девелопмента */}
+          <Link
+            href="/ai/00000000-0000-0000-0000-0000000000aa"
+            className="text-[11px] px-2 py-1 rounded-full border border-violet-500/60 text-violet-300 hover:bg-violet-500/10 transition"
+          >
+            AI-чат
+          </Link>
+        </div>
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold text-slate-50">DCL</span>
         </div>

@@ -1,4 +1,4 @@
-from asgiref.sync import async_to_sync
+from apps.utils.task_runner import run_task_sync
 from django.contrib.contenttypes.models import ContentType
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
@@ -235,7 +235,7 @@ class UploadCompleteView(APIView):
 
         media.save(update_fields=list(set(updated_fields)))
 
-        async_to_sync(process_media_file_variants_task)(str(media.id))
+        run_task_sync(process_media_file_variants_task, media.id)
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 

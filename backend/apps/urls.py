@@ -4,6 +4,7 @@ urlpatterns = [
     path("users/", include("apps.users.urls")),
     path("filehub/", include("apps.filehub.urls")),
     path("messaging/", include("apps.messaging.urls")),
+    path("ai/", include("apps.ai.urls", namespace="ai")),
     # path("places/", include("apps.places.urls")),
     # path("trips/", include("apps.trips.urls")),
     # path("reviews/", include("apps.reviews.urls")),

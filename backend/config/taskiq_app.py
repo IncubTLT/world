@@ -58,6 +58,7 @@ def create_scheduler(queue_name: str, schedule_prefix: str, pool_size: int = 1) 
 
     return broker, scheduler, redis_source
 
+
 taskiq_broker, scheduler, redis_source = create_scheduler("taskiq", "schedule", pool_size=10)
 
 

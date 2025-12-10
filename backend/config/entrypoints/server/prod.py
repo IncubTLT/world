@@ -7,6 +7,7 @@ class CustomUvicornWorker(UvicornWorker):
     CONFIG_KWARGS = {
         "http": "httptools",    # Использовать httptools для HTTP/1.1
         "lifespan": "on",       # Поддержка lifespan событий
+        "ws": "websockets",
         "log_level": "info",    # Уровень логов
     }
 

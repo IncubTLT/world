@@ -27,7 +27,9 @@ if not CERT_PASSPHRASE:
 DEFAULT_SIGNATURE_ALGORITHM = "RS256"
 
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
+DEBUG = os.environ.get("DJANGO_DEBUG", "0") == "1"
+IS_TEST_GPT = os.environ.get("IS_TEST_GPT", "1") == "1"
+
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', default='localhost').split(' ')
 DOMAIN = os.environ.get("DOMAIN")
 
@@ -61,6 +63,7 @@ INSTALLED_APPS = [
     "apps.social",
     "apps.complaints",
     "apps.utils",
+    "apps.ai",
 ]
 
 MIDDLEWARE = [
@@ -163,7 +166,7 @@ USE_TZ = True
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 AWS_S3_DOMAIN = os.getenv('AWS_S3_DOMAIN')
-AWS_S3_ENDPOINT_URL = f'https://{AWS_S3_DOMAIN}'
+AWS_S3_ENDPOINT_URL = f'http://{AWS_S3_DOMAIN}'
 AWS_S3_USE_SSL = bool(int(os.getenv('AWS_S3_USE_SSL', 0)))
 AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')
 
@@ -175,7 +178,7 @@ STATIC_BUCKET_NAME = os.getenv('STATIC_BUCKET_NAME')
 MEDIA_BUCKET_NAME = os.getenv('MEDIA_BUCKET_NAME')
 DATABASE_BUCKET_NAME = os.getenv('DATABASE_BUCKET_NAME')
 
-USE_S3 = bool(int(os.getenv('USE_S3', 0)))
+USE_S3 = bool(int(os.getenv('USE_S3', 1)))
 
 # === Пути к директориям ===
 STATICFILES_DIRS = (BASE_DIR / 'static',)
@@ -309,6 +312,19 @@ CACHES = {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }
+}
+
+REDIS_DB_CHANNELS = int(os.getenv("REDIS_DB_CHANNELS", "1"))
+REDIS_URL_CHANNELS = (
+    f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB_CHANNELS}"
+)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [REDIS_URL_CHANNELS],
+        },
+    },
 }
 
 DEFENDER_REDIS_URL = REDIS_URL

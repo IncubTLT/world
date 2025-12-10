@@ -54,7 +54,6 @@ FROM python:3.12-bookworm
 
 # 1) переменные окружения
 ENV PATH="/usr/lib/postgresql/17/bin:/root/.cargo/bin:${PATH}" \
-    LD_LIBRARY_PATH="/usr/lib/postgresql/17/lib:/lib/x86_64-linux-gnu" \
     PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 \
     PYTHONOPTIMIZE=1 PYTHONINSPECT=0
 
@@ -81,12 +80,17 @@ RUN apt-get update && \
       libcairo2 libpango-1.0-0 libgdk-pixbuf2.0-0 libffi8 \
       libjpeg62-turbo libpng16-16 shared-mime-info && \
     \
-    # --- Ключевой фикс: кладём libpq.so.5 в PGDG-каталог ---
-    cp /lib/x86_64-linux-gnu/libpq.so.5* /usr/lib/postgresql/17/lib/ && \
-    ln -sf libpq.so.5.17 /usr/lib/postgresql/17/lib/libpq.so.5 && \
+    # --- Ключевой фикс: кладём libpq.so.5 в PGDG-каталог (универсально для всех архитектур) ---
+    ARCH=$(dpkg-architecture -q DEB_HOST_MULTIARCH) && \
+    mkdir -p /usr/lib/postgresql/17/lib && \
+    (cp /lib/${ARCH}/libpq.so.5* /usr/lib/postgresql/17/lib/ 2>/dev/null || \
+     find /lib -name "libpq.so.5*" -type f -exec cp {} /usr/lib/postgresql/17/lib/ \;) && \
+    (cd /usr/lib/postgresql/17/lib && \
+     LIBPQ_VER=$(ls libpq.so.5.* | head -1 | sed 's/libpq.so.5\.//') && \
+     ln -sf libpq.so.5.${LIBPQ_VER} libpq.so.5) && \
     \
-    # Обновляем кеш динамического загрузчика
     echo "/usr/lib/postgresql/17/lib" > /etc/ld.so.conf.d/pgdg.conf && \
+    echo "/lib/${ARCH}" >> /etc/ld.so.conf.d/pgdg.conf && \
     ldconfig && \
     \
     # Чистим систему
