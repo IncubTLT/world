@@ -8,6 +8,12 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+class UserRole(models.TextChoices):
+    ADMIN = "admin", _("Администратор")
+    MODERATOR = "moderator", _("Модератор")
+    USER = "user", _("Пользователь")
+
+
 class CustomUserManager(BaseUserManager["User"]):
     use_in_migrations = True
 
@@ -24,7 +30,21 @@ class CustomUserManager(BaseUserManager["User"]):
         # если display_name не передали — берём часть до @
         extra_fields.setdefault("display_name", email.split("@")[0])
 
-        is_admin = bool(extra_fields.get("is_staff") or extra_fields.get("is_superuser"))
+        role = extra_fields.get("role") or UserRole.USER
+        extra_fields.setdefault("role", role)
+
+        if role == UserRole.ADMIN:
+            extra_fields.setdefault("is_staff", True)
+            extra_fields.setdefault("is_superuser", True)
+        elif role == UserRole.MODERATOR:
+            extra_fields.setdefault("is_staff", True)
+            extra_fields.setdefault("is_superuser", False)
+
+        is_admin = bool(
+            extra_fields.get("is_staff")
+            or extra_fields.get("is_superuser")
+            or role in (UserRole.ADMIN, UserRole.MODERATOR)
+        )
         user: User = self.model(email=email, **extra_fields)
 
         if is_admin:
@@ -54,6 +74,7 @@ class CustomUserManager(BaseUserManager["User"]):
         """
         extra_fields.setdefault("is_staff", False)
         extra_fields.setdefault("is_superuser", False)
+        extra_fields.setdefault("role", UserRole.USER)
         return self._create_user(email, password, **extra_fields)
 
     def create_superuser(
@@ -69,6 +90,7 @@ class CustomUserManager(BaseUserManager["User"]):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("is_active", True)
+        extra_fields.setdefault("role", UserRole.ADMIN)
 
         if extra_fields.get("is_staff") is not True:
             raise ValueError(_("Суперпользователь обязан иметь is_staff=True."))
@@ -123,6 +145,13 @@ class User(AbstractUser):
         _("Email подтверждён"),
         default=False,
         help_text=_("Отмечается после подтверждения email по коду или ссылке."),
+    )
+    role = models.CharField(
+        _("Роль"),
+        max_length=16,
+        choices=UserRole.choices,
+        default=UserRole.USER,
+        db_index=True,
     )
 
     objects: CustomUserManager = CustomUserManager()  # type: ignore[assignment]

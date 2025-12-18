@@ -1,38 +1,49 @@
 from django.conf import settings
-from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
+from django.contrib.contenttypes.fields import GenericRelation
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
+from apps.filehub.models import MediaAttachment
 from apps.places.models import Place
+from apps.utils.models import CreateUpdater
 
 
-class Review(models.Model):
-    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="reviews")
-    place = models.ForeignKey(Place, on_delete=models.CASCADE, related_name="reviews")
-    rating = models.PositiveSmallIntegerField(validators=[MinValueValidator(1), MaxValueValidator(5)])
-    text = models.TextField()
-    is_hidden = models.BooleanField(default=False)  # admin/moderator can hide without deleting
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+class Review(CreateUpdater):
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+        verbose_name=_("Автор"),
+    )
+    place = models.ForeignKey(
+        Place,
+        on_delete=models.CASCADE,
+        related_name="reviews",
+        verbose_name=_("Место"),
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        verbose_name=_("Оценка"),
+    )
+    text = models.TextField(verbose_name=_("Текст отзыва"))
+    is_hidden = models.BooleanField(
+        default=False,
+        verbose_name=_("Скрыт"),
+        help_text=_("Можно скрыть без удаления (модерация)."),
+    )
+    media_attachments = GenericRelation(
+        MediaAttachment,
+        related_query_name="review",
+        verbose_name=_("Медиа-файлы"),
+        help_text=_("Привязанные медиа через filehub."),
+    )
 
     class Meta:
+        verbose_name = _("Отзыв")
+        verbose_name_plural = _("Отзывы")
         ordering = ("-created_at",)
-        unique_together = ("author", "place")  # keeps single active review per author/place
+        unique_together = ("author", "place")
 
     def __str__(self) -> str:  # pragma: no cover - readable admin label
         return f"{self.place.name} ({self.rating}/5)"
-
-
-class ReviewMedia(models.Model):
-    review = models.ForeignKey(Review, on_delete=models.CASCADE, related_name="media")
-    image = models.ImageField(
-        upload_to="reviews/",
-        validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"])],
-        help_text="Limit to 3 photos per review in forms/serializers",
-    )
-    uploaded_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ("id",)
-
-    def __str__(self) -> str:  # pragma: no cover - readable admin label
-        return f"Review {self.review_id} image"

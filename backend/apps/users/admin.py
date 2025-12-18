@@ -7,10 +7,27 @@ from .models import Interest, User
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
     model = User
-    list_display = ("email", "display_name", "is_staff", "is_active", "profile_visibility")
-    list_filter = ("is_staff", "is_superuser", "is_active", "profile_visibility")
-    ordering = ("email",)
-    search_fields = ("email", "display_name", "country", "city")
+    list_display = (
+        "email",
+        "display_name",
+        "role",
+        "is_staff",
+        "is_active",
+        "email_confirmed",
+        "profile_visibility",
+        "date_joined",
+    )
+    list_filter = (
+        "role",
+        "profile_visibility",
+        "email_confirmed",
+        "is_staff",
+        "is_superuser",
+        "is_active",
+    )
+    ordering = ("-date_joined",)
+    search_fields = ("email", "display_name", "country", "city", "id")
+    autocomplete_fields = ("interests",)
 
     fieldsets = (
         (None, {"fields": ("email", "password", "display_name", "avatar", "bio")}),
@@ -18,7 +35,7 @@ class UserAdmin(DjangoUserAdmin):
         ("Visibility", {"fields": ("profile_visibility", "interests", "email_confirmed")}),
         (
             "Permissions",
-            {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
+            {"fields": ("role", "is_active", "is_staff", "is_superuser", "groups", "user_permissions")},
         ),
         ("Important dates", {"fields": ("last_login", "date_joined")}),
     )

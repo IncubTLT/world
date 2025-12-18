@@ -21,8 +21,9 @@ class PlaceTypeAdmin(admin.ModelAdmin):
 class GeoCoverageBindingInline(admin.TabularInline):
     model = GeoCoverageBinding
     extra = 0
-    raw_id_fields = ("content_type",)
-    fields = ("content_type", "object_id")
+    raw_id_fields = ("content_type", "coverage")
+    fields = ("coverage", "content_type", "object_id", "created_at")
+    readonly_fields = ("created_at",)
     verbose_name = _("Привязка")
     verbose_name_plural = _("Привязки")
 
@@ -35,9 +36,10 @@ class GeoCoverageAdmin(admin.ModelAdmin):
         "latitude",
         "longitude",
         "radius_meters",
+        "bindings_count",
         "created_at",
     )
-    list_filter = ("place_type",)
+    list_filter = ("place_type", ("created_at", admin.DateFieldListFilter))
     search_fields = ("name", "latitude", "longitude")
     ordering = ("-created_at",)
     readonly_fields = ("created_at", "updated_at")
@@ -47,12 +49,18 @@ class GeoCoverageAdmin(admin.ModelAdmin):
         (_("Координаты"), {"fields": ("latitude", "longitude", "radius_meters")}),
         (_("Служебное"), {"fields": ("created_at", "updated_at")}),
     )
+    list_select_related = ("place_type",)
+
+    @admin.display(description=_("Кол-во привязок"))
+    def bindings_count(self, obj):
+        return obj.links.count()
 
 
 @admin.register(GeoCoverageBinding)
 class GeoCoverageBindingAdmin(admin.ModelAdmin):
     list_display = ("coverage", "content_type", "object_id", "created_at")
-    list_filter = ("content_type",)
-    search_fields = ("object_id", "coverage__name")
-    raw_id_fields = ("coverage",)
+    list_filter = ("content_type", ("created_at", admin.DateFieldListFilter))
+    search_fields = ("object_id", "coverage__name", "content_type__model")
+    raw_id_fields = ("coverage", "content_type")
     readonly_fields = ("created_at",)
+    ordering = ("-created_at",)

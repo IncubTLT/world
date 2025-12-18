@@ -13,7 +13,7 @@ urlpatterns = [
     path("auth/verify-code/", VerifyCodeAPIView.as_view(), name="auth-verify-code"),
     path("auth/jwt/refresh/", TokenRefreshView.as_view(), name="token-refresh"),
 
-    # 🧩 Единая точка входа для всего API
+    # Единая точка входа для всего API
     path("api/", include("apps.urls")),
 
     # OpenAPI-схема

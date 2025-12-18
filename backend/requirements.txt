@@ -11,6 +11,7 @@ django-admin-extra-buttons~=2.1
 django-json-widget~=2.0.1
 email_validator~=2.2.0
 drf-spectacular~=0.29.0
+django-treebeard~=4.8.0
 aiosmtplib~=5.0.0
 
 # Хэширование

@@ -25,6 +25,7 @@ def _content_type_from_request(request):
 @extend_schema_view(
     list=extend_schema(
         summary=_("Список точек покрытия"),
+        tags=["geohub"],
         parameters=[
             OpenApiParameter(
                 name="target_app_label",
@@ -46,11 +47,11 @@ def _content_type_from_request(request):
             ),
         ],
     ),
-    create=extend_schema(summary=_("Создать точку покрытия")),
-    retrieve=extend_schema(summary=_("Получить точку покрытия с привязками")),
-    update=extend_schema(summary=_("Обновить точку покрытия")),
-    partial_update=extend_schema(summary=_("Частично обновить точку покрытия")),
-    destroy=extend_schema(summary=_("Удалить точку покрытия")),
+    create=extend_schema(summary=_("Создать точку покрытия"), tags=["geohub"]),
+    retrieve=extend_schema(summary=_("Получить точку покрытия с привязками"), tags=["geohub"]),
+    update=extend_schema(summary=_("Обновить точку покрытия"), tags=["geohub"]),
+    partial_update=extend_schema(summary=_("Частично обновить точку покрытия"), tags=["geohub"]),
+    destroy=extend_schema(summary=_("Удалить точку покрытия"), tags=["geohub"]),
 )
 class GeoCoverageViewSet(viewsets.ModelViewSet):
     queryset = GeoCoverage.objects.all().prefetch_related("links__content_type")
@@ -73,6 +74,7 @@ class GeoCoverageViewSet(viewsets.ModelViewSet):
 @extend_schema_view(
     list=extend_schema(
         summary=_("Список привязок точек покрытия к объектам"),
+        tags=["geohub"],
         parameters=[
             OpenApiParameter(
                 name="coverage",
@@ -100,8 +102,8 @@ class GeoCoverageViewSet(viewsets.ModelViewSet):
             ),
         ],
     ),
-    create=extend_schema(summary=_("Создать привязку точки покрытия к объекту")),
-    destroy=extend_schema(summary=_("Удалить привязку точки покрытия к объекту")),
+    create=extend_schema(summary=_("Создать привязку точки покрытия к объекту"), tags=["geohub"]),
+    destroy=extend_schema(summary=_("Удалить привязку точки покрытия к объекту"), tags=["geohub"]),
 )
 class GeoCoverageBindingViewSet(
     mixins.CreateModelMixin,
@@ -133,12 +135,12 @@ class GeoCoverageBindingViewSet(
 
 
 @extend_schema_view(
-    list=extend_schema(summary=_("Список типов местности")),
-    retrieve=extend_schema(summary=_("Получить тип местности")),
-    create=extend_schema(summary=_("Создать тип местности")),
-    update=extend_schema(summary=_("Обновить тип местности")),
-    partial_update=extend_schema(summary=_("Частично обновить тип местности")),
-    destroy=extend_schema(summary=_("Удалить тип местности")),
+    list=extend_schema(summary=_("Список типов местности"), tags=["geohub"]),
+    retrieve=extend_schema(summary=_("Получить тип местности"), tags=["geohub"]),
+    create=extend_schema(summary=_("Создать тип местности"), tags=["geohub"]),
+    update=extend_schema(summary=_("Обновить тип местности"), tags=["geohub"]),
+    partial_update=extend_schema(summary=_("Частично обновить тип местности"), tags=["geohub"]),
+    destroy=extend_schema(summary=_("Удалить тип местности"), tags=["geohub"]),
 )
 class PlaceTypeViewSet(viewsets.ModelViewSet):
     serializer_class = PlaceTypeSerializer

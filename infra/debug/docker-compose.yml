@@ -15,7 +15,7 @@ x-db-dependency: &db-dependency
     - REDIS_HOST=redis
 
 volumes:
-  db-data-2:
+  db-data-4:
   pgadmin_data:
   minio_volume:
 
@@ -29,7 +29,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db-data-2:/var/lib/postgresql/data/
+      - db-data-4:/var/lib/postgresql/data/
     env_file:
       - ../../.env
     restart: unless-stopped

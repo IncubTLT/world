@@ -18,83 +18,6 @@ from .tasks import process_media_file_variants_task
 from .utils import build_media_key
 
 
-@extend_schema(
-    operation_id="filehub_upload_init",
-    tags=["media"],
-    summary=_("Инициализация загрузки файлов"),
-    description=_(
-        "Создаёт записи медиа-файлов и (опционально) привязки к объектам. "
-        "Возвращает presigned POST формы для прямой загрузки файлов в S3/MinIO. "
-        "Фактическая загрузка файла осуществляется клиентом непосредственно в хранилище."
-    ),
-    request=UploadInitSerializer,
-    responses={
-        201: OpenApiResponse(
-            response=UploadInitResponseSerializer,
-            description=_("Presigned данные для загрузки файлов успешно сгенерированы."),
-        ),
-        400: OpenApiResponse(
-            description=_("Ошибка валидации входных данных (опасное расширение, MIME, неверная привязка к объекту и т.п.).")
-        ),
-        401: OpenApiResponse(description=_("Пользователь не авторизован.")),
-    },
-    examples=[
-        OpenApiExample(
-            name="Инициализация загрузки двух изображений",
-            value={
-                "files": [
-                    {
-                        "original_name": "avatar.png",
-                        "file_type": "image",
-                        "content_type": "image/png",
-                        "visibility": "private",
-                        "target_app_label": "users",
-                        "target_model": "user",
-                        "target_object_id": 42,
-                        "role": "avatar",
-                        "priority": 10,
-                    },
-                    {
-                        "original_name": "product-photo.jpg",
-                        "file_type": "image",
-                        "content_type": "image/jpeg",
-                        "visibility": "public",
-                        "target_app_label": "catalog",
-                        "target_model": "product",
-                        "target_object_id": 1001,
-                        "role": "gallery",
-                        "priority": 100,
-                    },
-                ]
-            },
-            request_only=True,
-        ),
-        OpenApiExample(
-            name="Ответ upload-init",
-            value={
-                "files": [
-                    {
-                        "media_file_id": "4a9e15c4-8b3e-4f93-9dfb-2b4e235db1e9",
-                        "key": "images/private/users/user/42/user_42/2025/12/09/xxx.png",
-                        "visibility": "private",
-                        "upload": {
-                            "url": "https://minio.example.com/media-bucket",
-                            "fields": {
-                                "key": "images/private/users/user/42/user_42/2025/12/09/xxx.png",
-                                "policy": "BASE64_POLICY",
-                                "x-amz-algorithm": "AWS4-HMAC-SHA256",
-                                "x-amz-credential": "ACCESS_KEY/...",
-                                "x-amz-date": "20251209T120000Z",
-                                "x-amz-signature": "SIGNATURE",
-                            },
-                        },
-                    }
-                ]
-            },
-            response_only=True,
-        ),
-    ],
-)
 class UploadInitView(APIView):
     """
     1) Создаёт записи MediaFile (и при необходимости MediaAttachment).
@@ -102,6 +25,83 @@ class UploadInitView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        operation_id="filehub_upload_init",
+        tags=["media"],
+        summary=_("Инициализация загрузки файлов"),
+        description=_(
+            "Создаёт записи медиа-файлов и (опционально) привязки к объектам. "
+            "Возвращает presigned POST формы для прямой загрузки файлов в S3/MinIO. "
+            "Фактическая загрузка файла осуществляется клиентом непосредственно в хранилище."
+        ),
+        request=UploadInitSerializer,
+        responses={
+            201: OpenApiResponse(
+                response=UploadInitResponseSerializer,
+                description=_("Presigned данные для загрузки файлов успешно сгенерированы."),
+            ),
+            400: OpenApiResponse(
+                description=_("Ошибка валидации входных данных (опасное расширение, MIME, неверная привязка к объекту и т.п.).")
+            ),
+            401: OpenApiResponse(description=_("Пользователь не авторизован.")),
+        },
+        examples=[
+            OpenApiExample(
+                name="Инициализация загрузки двух изображений",
+                value={
+                    "files": [
+                        {
+                            "original_name": "avatar.png",
+                            "file_type": "image",
+                            "content_type": "image/png",
+                            "visibility": "private",
+                            "target_app_label": "users",
+                            "target_model": "user",
+                            "target_object_id": 42,
+                            "role": "avatar",
+                            "priority": 10,
+                        },
+                        {
+                            "original_name": "product-photo.jpg",
+                            "file_type": "image",
+                            "content_type": "image/jpeg",
+                            "visibility": "public",
+                            "target_app_label": "catalog",
+                            "target_model": "product",
+                            "target_object_id": 1001,
+                            "role": "gallery",
+                            "priority": 100,
+                        },
+                    ]
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                name="Ответ upload-init",
+                value={
+                    "files": [
+                        {
+                            "media_file_id": "4a9e15c4-8b3e-4f93-9dfb-2b4e235db1e9",
+                            "key": "images/private/users/user/42/user_42/2025/12/09/xxx.png",
+                            "visibility": "private",
+                            "upload": {
+                                "url": "https://minio.example.com/media-bucket",
+                                "fields": {
+                                    "key": "images/private/users/user/42/user_42/2025/12/09/xxx.png",
+                                    "policy": "BASE64_POLICY",
+                                    "x-amz-algorithm": "AWS4-HMAC-SHA256",
+                                    "x-amz-credential": "ACCESS_KEY/...",
+                                    "x-amz-date": "20251209T120000Z",
+                                    "x-amz-signature": "SIGNATURE",
+                                },
+                            },
+                        }
+                    ]
+                },
+                response_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         serializer = UploadInitSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -158,35 +158,6 @@ class UploadInitView(APIView):
         return Response({"files": results}, status=status.HTTP_201_CREATED)
 
 
-@extend_schema(
-    operation_id="filehub_upload_complete",
-    tags=["media"],
-    summary=_("Подтверждение завершения загрузки файла"),
-    description=_(
-        "Вызывается клиентом после успешной загрузки файла в S3/MinIO. "
-        "Обновляет метаданные (размер, чек-сумма) и переводит файл в статус 'uploaded'. "
-        "После этого запускается асинхронная обработка (создание превью, webp и т.п.)."
-    ),
-    request=UploadCompleteSerializer,
-    responses={
-        204: OpenApiResponse(description=_("Загрузка подтверждена, обработка запущена.")),
-        400: OpenApiResponse(description=_("Ошибка валидации (например, превышен лимит размера файла).")),
-        401: OpenApiResponse(description=_("Пользователь не авторизован.")),
-        403: OpenApiResponse(description=_("Нет прав подтверждать загрузку этого файла.")),
-        404: OpenApiResponse(description=_("Медиа-файл не найден.")),
-    },
-    examples=[
-        OpenApiExample(
-            name="Подтверждение загрузки",
-            value={
-                "media_file_id": "4a9e15c4-8b3e-4f93-9dfb-2b4e235db1e9",
-                "size_bytes": 123456,
-                "checksum": "e3b0c44298fc1c149afbf4c8996fb924..."
-            },
-            request_only=True,
-        ),
-    ],
-)
 class UploadCompleteView(APIView):
     """
     Клиент вызывает после успешной загрузки в S3.
@@ -195,6 +166,35 @@ class UploadCompleteView(APIView):
 
     permission_classes = [IsAuthenticated]
 
+    @extend_schema(
+        operation_id="filehub_upload_complete",
+        tags=["media"],
+        summary=_("Подтверждение завершения загрузки файла"),
+        description=_(
+            "Вызывается клиентом после успешной загрузки файла в S3/MinIO. "
+            "Обновляет метаданные (размер, чек-сумма) и переводит файл в статус 'uploaded'. "
+            "После этого запускается асинхронная обработка (создание превью, webp и т.п.)."
+        ),
+        request=UploadCompleteSerializer,
+        responses={
+            204: OpenApiResponse(description=_("Загрузка подтверждена, обработка запущена.")),
+            400: OpenApiResponse(description=_("Ошибка валидации (например, превышен лимит размера файла).")),
+            401: OpenApiResponse(description=_("Пользователь не авторизован.")),
+            403: OpenApiResponse(description=_("Нет прав подтверждать загрузку этого файла.")),
+            404: OpenApiResponse(description=_("Медиа-файл не найден.")),
+        },
+        examples=[
+            OpenApiExample(
+                name="Подтверждение загрузки",
+                value={
+                    "media_file_id": "4a9e15c4-8b3e-4f93-9dfb-2b4e235db1e9",
+                    "size_bytes": 123456,
+                    "checksum": "e3b0c44298fc1c149afbf4c8996fb924..."
+                },
+                request_only=True,
+            ),
+        ],
+    )
     def post(self, request):
         serializer = UploadCompleteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

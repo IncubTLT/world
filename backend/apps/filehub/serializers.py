@@ -143,6 +143,28 @@ class UploadInitSerializer(serializers.Serializer):
     )
 
 
+class MediaAttachmentSerializer(serializers.ModelSerializer):
+    """
+    Read-only представление привязки медиа к объекту.
+    """
+
+    media_file = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = MediaAttachment
+        fields = [
+            "id",
+            "media_file",
+            "role",
+            "priority",
+            "is_primary",
+            "title",
+            "description",
+            "created_at",
+        ]
+        read_only_fields = fields
+
+
 class UploadCompleteSerializer(serializers.Serializer):
     """
     Подтверждение того, что файл залит в S3 и с ним можно работать дальше.

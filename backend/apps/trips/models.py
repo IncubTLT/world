@@ -1,52 +1,85 @@
 from django.conf import settings
 from django.db import models
+from django.utils.translation import gettext_lazy as _
+from treebeard.mp_tree import MP_Node
 
+from apps.geohub.models import GeoCoverable
 from apps.places.models import Place
+from apps.utils.models import CreateUpdater
 
 
-class Trip(models.Model):
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="trips")
-    title = models.CharField(max_length=255)
-    short_description = models.CharField(max_length=280, blank=True)
-    description = models.TextField(blank=True)
-    is_public = models.BooleanField(default=True)
+class Trip(CreateUpdater):
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="trips",
+        verbose_name=_("Владелец"),
+    )
+    title = models.CharField(max_length=255, verbose_name=_("Название"))
+    short_description = models.CharField(
+        max_length=280,
+        blank=True,
+        verbose_name=_("Краткое описание"),
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name=_("Описание"),
+    )
+    is_public = models.BooleanField(
+        default=True,
+        verbose_name=_("Публичный"),
+        help_text=_("Доступен другим пользователям."),
+    )
     source_trip = models.ForeignKey(
         "self",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="forks",
-        help_text="Keeps attribution for 'Save to myself' copies",
+        verbose_name=_("Исходный маршрут"),
+        help_text=_("Для копий 'Сохранить себе' сохраняем ссылку на оригинал."),
     )
-    is_hidden = models.BooleanField(default=False)  # allows admin/moderation to hide without delete
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    is_hidden = models.BooleanField(
+        default=False,
+        verbose_name=_("Скрыт"),
+        help_text=_("Можно скрыть без удаления (модерация)."),
+    )
 
     class Meta:
+        verbose_name = _("Маршрут")
+        verbose_name_plural = _("Маршруты")
         ordering = ("-created_at",)
 
     def __str__(self) -> str:  # pragma: no cover - readable admin label
         return self.title
 
 
-class TripPoint(models.Model):
-    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="points")
-    order = models.PositiveSmallIntegerField()  # rendering order in route
-    latitude = models.DecimalField(max_digits=9, decimal_places=6)
-    longitude = models.DecimalField(max_digits=9, decimal_places=6)
-    note = models.CharField(max_length=255, blank=True)
+class TripPoint(GeoCoverable, MP_Node):
+    trip = models.ForeignKey(
+        Trip,
+        on_delete=models.CASCADE,
+        related_name="points",
+        verbose_name=_("Маршрут"),
+    )
+    note = models.CharField(
+        max_length=512,
+        blank=True,
+        verbose_name=_("Заметка"),
+    )
     place = models.ForeignKey(
         Place,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="trip_points",
-        help_text="Optional link when point is based on an existing Place",
+        verbose_name=_("Место"),
+        help_text=_("Связь с Place, если точка основана на существующем месте."),
     )
 
     class Meta:
-        ordering = ("order",)
-        unique_together = ("trip", "order")
+        verbose_name = _("Точка маршрута")
+        verbose_name_plural = _("Точки маршрута")
+        ordering = ("path",)
 
     def __str__(self) -> str:  # pragma: no cover - readable admin label
-        return f"{self.trip.title} #{self.order}"
+        return f"{self.trip.title} [{self.path}]"

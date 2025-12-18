@@ -2,6 +2,8 @@ from django.contrib.contenttypes.fields import GenericRelation
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from django.conf import settings
+
 from apps.filehub.models import MediaAttachment
 from apps.geohub.models import GeoCoverable, PlaceType
 from apps.utils.models import CreateUpdater
@@ -45,6 +47,15 @@ class Place(GeoCoverable, CreateUpdater):
         related_query_name="place",
         verbose_name=_("Медиа-файлы"),
         help_text=_("Привязанные медиа-файлы через filehub."),
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_places",
+        verbose_name=_("Создал"),
+        help_text=_("Только автор может редактировать место."),
     )
     is_active = models.BooleanField(
         default=True,

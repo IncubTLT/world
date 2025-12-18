@@ -1,5 +1,8 @@
+from typing import Any
+
 from django.contrib.contenttypes.models import ContentType
 from django.utils.translation import gettext_lazy as _
+from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from .models import GeoCoverage, GeoCoverageBinding, PlaceType
@@ -54,7 +57,7 @@ class GeoCoverageBindingReadSerializer(serializers.ModelSerializer):
 
     target_app_label = serializers.SerializerMethodField()
     target_model = serializers.SerializerMethodField()
-    coverage = GeoCoverageSerializer(read_only=True)
+    coverage = serializers.SerializerMethodField()
 
     class Meta:
         model = GeoCoverageBinding
@@ -73,6 +76,10 @@ class GeoCoverageBindingReadSerializer(serializers.ModelSerializer):
 
     def get_target_model(self, obj: GeoCoverageBinding) -> str:
         return obj.content_type.model
+
+    @extend_schema_field(GeoCoverageSerializer)
+    def get_coverage(self, obj: GeoCoverageBinding) -> dict[str, Any]:
+        return GeoCoverageSerializer(obj.coverage, context=self.context).data
 
 
 class GeoCoverageBindingCreateSerializer(serializers.ModelSerializer):
